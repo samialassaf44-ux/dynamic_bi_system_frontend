@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Trash2,Edit2 } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
+
+// ✅ API URL - يقرأ من متغير البيئة أو يستخدم localhost للتطوير
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export default function ChartView({ chart, currentFilters, onChartClick, onDelete, onEdit }) {
   const [chartOptions, setChartOptions] = useState(null);
@@ -10,16 +13,8 @@ export default function ChartView({ chart, currentFilters, onChartClick, onDelet
     const fetchRealChartData = async () => {
       setLoading(true);
       try {
-        // const response = await fetch('http://127.0.0.1:8000/api/chart-data', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify({
-        //     x_column: chart.x,
-        //     y_column: chart.y || "",
-        //     filters: currentFilters && Object.keys(currentFilters).length > 0 ? currentFilters : {}
-        //   })
-        // });
-        const response = await fetch('/api/chart-data', {
+        // ✅ استخدام API_URL بدلاً من المسار النسبي
+        const response = await fetch(`${API_URL}/api/chart-data`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -33,13 +28,11 @@ export default function ChartView({ chart, currentFilters, onChartClick, onDelet
         const isPieOrDonut = chart.type === 'pie' || chart.type === 'donut';
         const isHorizontal = chart.type === 'horizontal_bar';
 
-        // 💡 تطبيق الألوان بناء على النمط المختار (موحد، أوتوماتيكي، أو يدوياً بالكامل)
         let seriesData = [];
 
         if (isPieOrDonut) {
           seriesData = data.x_data.map((name, i) => {
             let itemColor = undefined;
-            // إذا كان التلوين يدوياً، نأخذ اللون الذي حدده المستخدم بيده لهذه الفئة بالتحديد
             if (chart.colorMode === 'manual' && chart.customCategoryColors) {
               itemColor = chart.customCategoryColors[name];
             }
@@ -50,14 +43,13 @@ export default function ChartView({ chart, currentFilters, onChartClick, onDelet
             };
           });
         } else {
-          // للمخططات العمودية والأفقية
           if (chart.colorMode === 'manual' && chart.customCategoryColors) {
             seriesData = data.y_data.map((val, idx) => {
-              const categoryName = data.x_data[idx]; // اسم الفئة المقابلة لهذا العمود
+              const categoryName = data.x_data[idx];
               const chosenColor = chart.customCategoryColors[categoryName] || chart.themeColor;
               return {
                 value: val,
-                itemStyle: { color: chosenColor } // تطبيق اللون اليدوي للعمود بدقة
+                itemStyle: { color: chosenColor }
               };
             });
           } else if (chart.colorMode === 'multi') {
@@ -67,7 +59,7 @@ export default function ChartView({ chart, currentFilters, onChartClick, onDelet
               itemStyle: { color: predefinedColors[idx % predefinedColors.length] }
             }));
           } else {
-            seriesData = data.y_data; // لون موحد
+            seriesData = data.y_data;
           }
         }
 
@@ -116,13 +108,13 @@ export default function ChartView({ chart, currentFilters, onChartClick, onDelet
   return (
     <div className={`bg-white border border-gray-200 rounded-xl p-4 shadow-sm relative hover:shadow-md transition-shadow ${containerClass}`}>
       <div className="flex items-center gap-2">
-  <button onClick={onEdit} className="p-1 text-gray-400 hover:text-amber-600 transition-colors" title="تعديل خصائص المخطط">
-    <Edit2 className="w-4 h-4" /> {/* أو اكتب كلمة "تعديل" */}
-  </button>
-  <button onClick={() => onDelete(chart.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors" title="حذف">
-    <Trash2 className="w-4 h-4" />
-  </button>
-</div>
+        <button onClick={onEdit} className="p-1 text-gray-400 hover:text-amber-600 transition-colors" title="تعديل خصائص المخطط">
+          <Edit2 className="w-4 h-4" />
+        </button>
+        <button onClick={() => onDelete(chart.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors" title="حذف">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
       <div className="mt-4">
         {chartOptions && (
           <ReactECharts 
