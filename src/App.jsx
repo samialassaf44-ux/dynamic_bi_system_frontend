@@ -5,6 +5,9 @@ import Sidebar from './components/Sidebar';
 import ChartView from './components/ChartView';
 import { BarChart3, Table, EyeOff, Loader2 } from 'lucide-react';
 
+// ✅ API URL - يقرأ من متغير البيئة أو يستخدم localhost للتطوير
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 export default function App() {
   const [fileUploaded, setFileUploaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -16,10 +19,8 @@ export default function App() {
   const [dataSummary, setDataSummary] = useState({ rows: 0, cols: 0 });
   const [isAnalysisStarted, setIsAnalysisStarted] = useState(false);
 
-  // 💡 [جديد]: حالة تخزين المخطط الجاري تعديله حالياً (null يعني وضع إضافة مخطط جديد)
   const [editingChart, setEditingChart] = useState(null);
 
-  // 💡 [جديد]: حالات إدارة جدول البيانات المفلترة للعقدة الحالية
   const [showNodeTable, setShowNodeTable] = useState(false);
   const [nodeTableData, setNodeTableData] = useState([]);
   const [nodeTableRowsCount, setNodeTableRowsCount] = useState(0);
@@ -30,7 +31,7 @@ export default function App() {
   const [chartHeight, setChartHeight] = useState('350px');
   const [barWidth, setBarWidth] = useState(50);
   const [colorMode, setColorMode] = useState('single');
-  
+
   const [breadcrumbs, setBreadcrumbs] = useState([{ id: 'root', name: 'الرئيسية', filter: {} }]);
 
   const [charts, setCharts] = useState([]);
@@ -59,7 +60,6 @@ export default function App() {
     });
   }, [savedFonts]);
 
-  // 💡 [جديد]: جلب بيانات الجدول المفلترة للعقدة الحالية عند تغيير الـ breadcrumbs أو طلب عرضه
   useEffect(() => {
     if (isAnalysisStarted && showNodeTable) {
       fetchNodeTableData();
@@ -70,12 +70,8 @@ export default function App() {
     setLoadingTable(true);
     try {
       const currentFilters = breadcrumbs[breadcrumbs.length - 1].filter;
-      // const response = await fetch('http://127.0.0.1:8000/api/table-data', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ filters: currentFilters })
-      // });
-      const response = await fetch('/api/table-data', {
+      // ✅ استخدام API_URL بدلاً من المسار النسبي
+      const response = await fetch(`${API_URL}/api/table-data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filters: currentFilters })
@@ -170,10 +166,9 @@ export default function App() {
     clearSidebarFields();
   };
 
-  // 💡 [جديد]: دالة لتنفيذ حفظ التعديلات على مخطط معين بالذات
   const handleUpdateChart = () => {
     if (!editingChart) return;
-    
+
     setCharts(prevCharts => prevCharts.map(ch => {
       if (ch.id === editingChart.id) {
         return {
@@ -195,11 +190,10 @@ export default function App() {
       return ch;
     }));
 
-    setEditingChart(null); // إنهاء وضع التعديل
+    setEditingChart(null);
     clearSidebarFields();
   };
 
-  // 💡 [جديد]: دالة لتمرير المخطط المراد تعديله إلى السايدبار وملء الحقول
   const handleEditClick = (chart) => {
     setEditingChart(chart);
     setSelectedX(chart.x);
@@ -222,33 +216,30 @@ export default function App() {
     setEditingChart(null);
   };
 
- const onChartClick = (params, columnX) => {
-  // 💡 تأمين استخراج القيمة النصية النظيفة منعاً لظهور [object Object]
-  let clickedValue = params.name;
-  
-  if (clickedValue && typeof clickedValue === 'object') {
-    clickedValue = clickedValue.value || clickedValue.text || JSON.stringify(clickedValue);
-  }
-  
-  if (!clickedValue) return;
-  
-  // تحويل القيمة إلى نص نظيف تماماً ومسح الفراغات
-  clickedValue = String(clickedValue).strip ? String(clickedValue).strip() : String(clickedValue).trim();
+  const onChartClick = (params, columnX) => {
+    let clickedValue = params.name;
 
-  const currentLevel = breadcrumbs[breadcrumbs.length - 1];
-  const newLevelId = `level_${Date.now()}`;
-  
-  // استخدام اسم العمود الحقيقي القادم مباشرة من كرت المخطط
-  const xColumnName = columnX || "فئة";
+    if (clickedValue && typeof clickedValue === 'object') {
+      clickedValue = clickedValue.value || clickedValue.text || JSON.stringify(clickedValue);
+    }
 
-  const newLevel = {
-    id: newLevelId,
-    name: `${xColumnName}: ${clickedValue}`, // سيعرض الآن مثلاً: (الجنس: ذكور) بدلاً من (فئة: [object Object])
-    filter: { ...currentLevel.filter, [xColumnName]: clickedValue }
+    if (!clickedValue) return;
+
+    clickedValue = String(clickedValue).strip ? String(clickedValue).strip() : String(clickedValue).trim();
+
+    const currentLevel = breadcrumbs[breadcrumbs.length - 1];
+    const newLevelId = `level_${Date.now()}`;
+
+    const xColumnName = columnX || "فئة";
+
+    const newLevel = {
+      id: newLevelId,
+      name: `${xColumnName}: ${clickedValue}`,
+      filter: { ...currentLevel.filter, [xColumnName]: clickedValue }
+    };
+
+    setBreadcrumbs([...breadcrumbs, newLevel]);
   };
-  
-  setBreadcrumbs([...breadcrumbs, newLevel]);
-};
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-right" dir="rtl">
@@ -279,8 +270,7 @@ export default function App() {
           setCustomCategoryColors={setCustomCategoryColors}
           fontFamily={fontFamily} setFontFamily={setFontFamily}
           savedFonts={savedFonts} setSavedFonts={setSavedFonts}
-          
-          // 💡 تمرير خصائص وضع التعديل المنفصل
+
           editingChart={editingChart}
           onUpdateChart={handleUpdateChart}
           onCancelEdit={clearSidebarFields}
@@ -303,7 +293,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* جدول المعاينة القديم للملف المكتمل */}
               <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
                 <div className="bg-gray-50 p-3 border-b text-sm font-bold text-[#002623]">معاينة الهيكل الصدري للبيانات (أول 5 صفوف)</div>
                 <div className="overflow-x-auto">
@@ -328,8 +317,7 @@ export default function App() {
 
           {fileUploaded && isAnalysisStarted && (
             <div className="space-y-4">
-              
-              {/* 💡 [القسم الثاني الجديد]: شريط التحكم العلوي وزر عرض البيانات الخاص بالعقدة الحالية */}
+
               <div className="bg-white p-4 border border-gray-200 rounded-xl flex justify-between items-center shadow-sm">
                 <div>
                   <h3 className="font-bold text-[#002623] text-sm">المخططات المتفاعلة في عقدة: <span className="text-[#428177] font-extrabold">{breadcrumbs[breadcrumbs.length - 1].name}</span></h3>
@@ -345,7 +333,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* 💡 [القسم الثاني الجديد]: جدول الأسطر المفلترة للعقدة الحالية */}
               {showNodeTable && (
                 <div className="bg-white border border-amber-100 rounded-xl overflow-hidden shadow-md transition-all animate-fadeIn">
                   <div className="bg-amber-50/50 p-3 border-b border-amber-100 text-xs font-bold text-amber-900 flex justify-between items-center">
@@ -378,7 +365,6 @@ export default function App() {
                 </div>
               )}
 
-              {/* شبكة عرض المخططات البيانية */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {charts
                   .filter(c => c.levelId === breadcrumbs[breadcrumbs.length - 1].id)
@@ -389,8 +375,6 @@ export default function App() {
                       currentFilters={breadcrumbs[breadcrumbs.length - 1].filter} 
                       onChartClick={onChartClick}
                       onDelete={(id) => setCharts(charts.filter(c => c.id !== id))}
-                      
-                      // 💡 تمرير دالة كبس التعديل للمخطط
                       onEdit={() => handleEditClick(chart)}
                     />
                   ))}
