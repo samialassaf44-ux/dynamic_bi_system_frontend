@@ -1,6 +1,8 @@
 import React from 'react';
 import { Upload } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 export default function FileUpload({ onUploadSuccess, loading, fileName }) {
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -10,14 +12,11 @@ export default function FileUpload({ onUploadSuccess, loading, fileName }) {
     formData.append('file', file);
 
     try {
-      // const response = await fetch('http://127.0.0.1:8000/api/upload', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      const response = await fetch('/api/upload', {
+      const response = await fetch(`${API_URL}/api/upload`, {  // ✅ await + const
         method: 'POST',
         body: formData,
       });
+
       const result = await response.json();
       if (result.status === 'success') {
         onUploadSuccess(result);
