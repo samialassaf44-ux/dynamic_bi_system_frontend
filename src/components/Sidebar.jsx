@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Layout, Palette, Sliders, Trash2, Plus, Check } from 'lucide-react';
 
+// ✅ API URL - يقرأ من متغير البيئة أو يستخدم localhost للتطوير
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
 export default function Sidebar({ 
   allColumns, isAnalysisStarted, selectedX, setSelectedX, selectedY, setSelectedY,
   chartType, setChartType, chartTitle, setChartTitle, themeColor, setThemeColor,
@@ -9,14 +12,11 @@ export default function Sidebar({
   barWidth, setBarWidth, colorMode, setColorMode,
   customCategoryColors, setCustomCategoryColors,
   onDeleteColumn,
-  // استقبال الخصائص الجديدة للخطوط الذكية
   fontFamily, setFontFamily, savedFonts, setSavedFonts,
-  // 💡 [جديد]: استقبال خصائص وضع التعديل المنفصل القادمة من App.jsx
   editingChart, onUpdateChart, onCancelEdit
 }) {
 
   const [uniqueCategories, setUniqueCategories] = useState([]);
-  // حالات داخلية لإدارة نموذج إضافة الخط الجديد
   const [showFontInput, setShowFontInput] = useState(false);
   const [newFontName, setNewFontName] = useState('');
 
@@ -24,12 +24,11 @@ export default function Sidebar({
     if (selectedX && colorMode === 'manual') {
       const fetchCategories = async () => {
         try {
-          // const response = await fetch(`http://127.0.0.1:8000/api/column-categories?column=${encodeURIComponent(selectedX)}`);
-          const response = await fetch(`/api/column-categories?column=${encodeURIComponent(selectedX)}`);
+          // ✅ استخدام API_URL بدلاً من المسار النسبي
+          const response = await fetch(`${API_URL}/api/column-categories?column=${encodeURIComponent(selectedX)}`);
           const data = await response.json();
           setUniqueCategories(data.categories || []);
           
-          // في حال عدم وجود ألوان مخصصة محفوظة مسبقاً لهذا المخطط، نقوم بتعبئتها تلقائياً كالعادة
           if (Object.keys(customCategoryColors).length === 0) {
             const initialColors = {};
             data.categories.forEach((cat, index) => {
@@ -55,7 +54,6 @@ export default function Sidebar({
     }));
   };
 
-  // دالة معالجة وحفظ الخط الخارجي الجديد في الذاكرة المحلية والـ CDN
   const handleSaveCustomFont = () => {
     const trimmedName = newFontName.trim();
     if (!trimmedName) return alert('يرجى كتابة اسم الخط أولاً');
@@ -133,7 +131,6 @@ export default function Sidebar({
         </div>
       ) : (
         <div className="space-y-4">
-          {/* 💡 [تحديث بصري]: تغيير عنوان السايدبار ديناميكياً لتنبيه المستخدم بالوضع الحالي */}
           <h2 className="font-bold text-[#054239] border-b pb-2 flex items-center gap-2 text-base">
             <Palette className="w-5 h-5 text-[#8e7b5b]" /> 
             {editingChart ? '🔧 تعديل خصائص المخطط المحدد' : 'إعدادات وتخصيص المخطط'}
@@ -167,7 +164,6 @@ export default function Sidebar({
             <input type="text" className="w-full border rounded-lg p-2 text-sm border-gray-300" placeholder="اكتب عنواناً..." value={chartTitle} onChange={(e) => setChartTitle(e.target.value)} />
           </div>
 
-          {/* نظام تلوين الأقسام والأعمدة المطور */}
           <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-2">
             <label className="text-xs font-bold text-[#054239] flex items-center gap-1"><Palette className="w-4 h-4"/> نظام تلوين الأقسام والأعمدة</label>
             <div className="grid grid-cols-3 gap-1">
@@ -204,7 +200,6 @@ export default function Sidebar({
             )}
           </div>
 
-          {/* الخط والأبعاد الهندسي */}
           <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
             <label className="text-xs font-bold text-[#054239] flex items-center gap-1"><Sliders className="w-4 h-4"/> الخط والأبعاد الهندسية</label>
             
@@ -276,7 +271,6 @@ export default function Sidebar({
             )}
           </div>
 
-          {/* 💡 [جديد]: تبديل أزرار الحفظ والإضافة ديناميكياً تبعاً لحالة النظام */}
           {editingChart ? (
             <div className="grid grid-cols-2 gap-2 mt-2">
               <button 
